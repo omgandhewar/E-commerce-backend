@@ -2,6 +2,7 @@ from flask import Flask, request, session, Blueprint
 from flask_jwt_extended import create_access_token, jwt_required, create_refresh_token, get_jwt_identity
 from flask_bcrypt import generate_password_hash, check_password_hash
 from app import bcrypt
+import os
 from app.db import get_db
 
 
@@ -44,6 +45,7 @@ def signup():
     
 @main.route("/login",methods=["GET","POST"])
 def login():
+    print("DB HOST:", os.getenv("DB_HOST"))
     db=get_db()
     cursor=db.cursor()
     
@@ -85,4 +87,14 @@ def login():
         "refresh_token":refresh_token
     }
         
+        
+@main.route("/dashboard",methods=["GET"])
+@jwt_required()
+def dashboard():
+    
+    current_user=get_jwt_identity()
+    
+    return{
+        "message":f"welcome {current_user}"
+    }
         
