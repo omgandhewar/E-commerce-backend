@@ -1,7 +1,7 @@
 from flask import Flask, request, session, Blueprint
-from flask_jwt_extended import create_access_token, jwt_required, create_refresh_token, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt, create_refresh_token, get_jwt_identity
 from flask_bcrypt import generate_password_hash, check_password_hash
-from app import bcrypt
+from app import bcrypt, jwt
 import os
 from app.db import get_db
 
@@ -18,6 +18,7 @@ def signup():
     username=data.get("username")
     email=data.get("email")
     password=data.get("password")
+    role=data.get("role")
     
     sql="SELECT * FROM Users WHERE username=%s"
     cursor.execute(sql, (username,))   
@@ -32,8 +33,8 @@ def signup():
     
     hashed_password=bcrypt.generate_password_hash(password).decode("utf-8")
     
-    sql="INSERT INTO Users (username,email,password) VALUES (%s,%s,%s)"
-    values=(username,email,hashed_password)
+    sql="INSERT INTO Users (username,email,password,role) VALUES (%s,%s,%s,%s)"
+    values=(username,email,hashed_password,role)
     
     cursor.execute(sql, values)
     db.commit()
@@ -59,7 +60,7 @@ def login():
             "message":"email and password are required"
         }
         
-    sql="SELECT email,password FROM Users WHERE email=%s"
+    sql="SELECT email,password,role FROM Users WHERE email=%s"
     cursor.execute(sql,(email,))
     
     user_obj=cursor.fetchone()
@@ -77,7 +78,12 @@ def login():
             "message":"Invalid password"
         }
         
-    token=create_access_token(identity=email)
+    token=token = create_access_token(
+    identity=user_obj[0],
+    additional_claims={
+        "role": user_obj[2]
+    }
+)
     refresh_token=create_refresh_token(identity=email)
     
     
@@ -98,3 +104,115 @@ def dashboard():
         "message":f"welcome {current_user}"
     }
         
+        
+@main.route("/logout",methods=["POST"])
+@jwt_required(refresh=True)
+def logout():
+    db=get_db()
+    cursor=db.cursor()
+    
+    jti=get_jwt()["jti"]
+    
+    sql="INSERT INTO token_id(jti) VALUES (%s)"
+    values=(jti,)
+    
+    cursor.execute(sql,values)
+    db.commit()
+    
+    return{
+        "messages":"logout successfully"
+    }
+    
+@main.route("/refresh",methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    current_user=get_jwt_identity()
+    
+    new_access_token=create_access_token(identity=current_user)
+    
+    return{
+        "new_access_token":new_access_token
+    }
+    
+
+@main.route("/checktoken")
+@jwt.token_in_blocklist_loader
+def check_in_blocklist_token(jwt_header,jwt_payload):
+    db=get_db()
+    cursor=db.cursor()
+    
+    jti=jwt_payload["jti"]
+    
+    sql="SELECT jti FROM token_id WHERE jti=%s"
+    cursor.execute(sql,(jti,))
+    
+    user_obj=cursor.fetchone()
+    
+    return user_obj is not None
+
+
+@main.route("/addproducts",methods=["GET","POST"])
+@jwt_required()
+def add_product():
+    db=get_db()
+    cursor=db.cursor()
+    
+    current_user=get_jwt_identity()
+    
+    data=request.get_json()
+    
+    Product_name=data.get("Product_name")
+    Price=data.get("Price")
+    
+    if current_user["role"]=="admin":
+        sql="INSERT INTO Products(Product_name,Price) VALUES(%s,%s)"
+        values=(Product_name,Price)
+        
+        cursor.execute(sql,values)
+        db.commit()
+    
+    return{
+        "message":"product added successfully"
+    }
+    
+    
+
+@main.route("/products/<int:id>",methods=["GET"])
+def get_product(id):
+    db=get_db()
+    cursor=db.cursor()
+    
+    sql="SELECT * FROM Products WHERE Product_id=%s"
+    cursor.execute(sql,(id,))
+    
+    product=cursor.fetchone()
+    
+    if not product:
+        return{
+            "message":"product is not found"
+        }
+        
+    return{
+        "product":product
+    }
+
+@main.route("/addtocart/<int:id>",methods=["GET"])
+def add_to_cart(id):
+    db=get_db()
+    cursor=db.cursor()
+    
+    sql="SELECT * FROM Products WHERE Product_id=%s"
+    cursor.execute(sql,(id,))
+    
+    user_obj=cursor.fetchone()
+    
+    if not user_obj:
+        return{
+            "message":"product are not available"
+        }
+        
+    return{
+        "message":"product added successfully"
+    }
+    
+    
