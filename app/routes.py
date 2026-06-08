@@ -157,8 +157,8 @@ def add_product():
     db=get_db()
     cursor=db.cursor()
     
-    current_user=get_jwt_identity()
-    
+    current_user=get_jwt()
+
     data=request.get_json()
     
     Product_name=data.get("Product_name")
