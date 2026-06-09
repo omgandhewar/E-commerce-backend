@@ -163,19 +163,54 @@ def add_product():
     
     Product_name=data.get("Product_name")
     Price=data.get("Price")
+    quantity=data.get("quantity")
     
-    if current_user["role"]=="admin":
-        sql="INSERT INTO Products(Product_name,Price) VALUES(%s,%s)"
-        values=(Product_name,Price)
+    
+    if current_user["role"]!="admin":
+         return{
+            "message":"Invalid User"
+        }
+
+    sql="INSERT INTO Products(Product_name,Price,quantity) VALUES(%s,%s,%s)"
+    values=(Product_name,Price,quantity)
         
-        cursor.execute(sql,values)
-        db.commit()
+    cursor.execute(sql,values)
+    db.commit()
     
     return{
         "message":"product added successfully"
     }
     
     
+@main.route("/updateproducts/<int:id>",methods=["PUT"])
+@jwt_required()
+def update_product(id):
+    print("UPDATE ROUTE HIT")
+    db=get_db()
+    cursor=db.cursor()
+    
+    current_user=get_jwt()
+    
+    data=request.get_json()
+    
+    Product_name=data.get("Product_name")
+    Price=data.get("Price")
+    
+    if current_user["role"]!="admin":
+        return{
+            "message":"Invalid User"
+        }
+        
+    sql="UPDATE Products SET Product_name=%s,Price=%s WHERE Product_id=%s"
+    values=(Product_name,Price,id)
+    
+    cursor.execute(sql,values)
+    db.commit()
+    
+    return{
+        "message":"update successfully"
+    }
+
 
 @main.route("/products/<int:id>",methods=["GET"])
 def get_product(id):
@@ -196,7 +231,8 @@ def get_product(id):
         "product":product
     }
 
-@main.route("/addtocart/<int:id>",methods=["GET"])
+@main.route("/addtocart/<int:id>",methods=["POST"])
+@jwt_required()
 def add_to_cart(id):
     db=get_db()
     cursor=db.cursor()
@@ -211,8 +247,16 @@ def add_to_cart(id):
             "message":"product are not available"
         }
         
+    sql="INSERT INTO addcart(id) VALUES(%s)"
+    values=(id,)
+    
+    cursor.execute(sql,values)
+    db.commit()
+        
     return{
         "message":"product added successfully"
     }
+    
+
     
     
