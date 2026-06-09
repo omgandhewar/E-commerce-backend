@@ -60,7 +60,7 @@ def login():
             "message":"email and password are required"
         }
         
-    sql="SELECT email,password,role FROM Users WHERE email=%s"
+    sql="SELECT id,email,password,role FROM Users WHERE email=%s"
     cursor.execute(sql,(email,))
     
     user_obj=cursor.fetchone()
@@ -73,13 +73,13 @@ def login():
             "message":"Invalid email"
         }
         
-    if not bcrypt.check_password_hash(user_obj[1], password):
+    if not bcrypt.check_password_hash(user_obj[2], password):
         return{
             "message":"Invalid password"
         }
         
     token=token = create_access_token(
-    identity=user_obj[0],
+    identity=str(user_obj[0]),
     additional_claims={
         "role": user_obj[2]
     }
@@ -237,6 +237,12 @@ def add_to_cart(id):
     db=get_db()
     cursor=db.cursor()
     
+    current_user=get_jwt_identity()
+    
+    data=request.get_json()
+    
+    quantity=data.get("quantity")
+    
     sql="SELECT * FROM Products WHERE Product_id=%s"
     cursor.execute(sql,(id,))
     
@@ -247,14 +253,48 @@ def add_to_cart(id):
             "message":"product are not available"
         }
         
-    sql="INSERT INTO addcart(id) VALUES(%s)"
-    values=(id,)
+    sql="INSERT INTO addcart(id,product_id,quantity) VALUES(%s,%s,%s)"
+    values=(current_user,id,quantity)
     
     cursor.execute(sql,values)
     db.commit()
         
     return{
         "message":"product added successfully"
+    }
+    
+@main.route("/orders/<int:id>",methods=["POST"])
+@jwt_required()
+def orders(id):
+    db=get_db()
+    cursor=db.cursor()
+    
+    current_user=get_jwt_identity()
+    
+    sql="SELECT * FROM addcart WHERE id=%s"
+    cursor.execute(sql,(current_user,))
+    
+    products=cursor.fetchone()
+    
+    sql="SELECT SUM(c.quantity * p.Price) AS amount FROM addcart c JOIN Products p ON c.Product_id = p.Product_id WHERE c.id=%s   "
+    cursor.execute(sql,(current_user,))
+    
+    product=cursor.fetchone()
+    amount=product[0]
+    
+    if not products:
+        return{
+            "message":"product not in cart"
+        }
+
+    sql="INSERT INTO order1(id,amount) VALUES(%s,%s)"
+    values=(current_user,amount)
+    
+    cursor.execute(sql,values)
+    db.commit()
+    
+    return{
+        "message":"order is added successfully"
     }
     
 
