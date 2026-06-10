@@ -263,9 +263,9 @@ def add_to_cart(id):
         "message":"product added successfully"
     }
     
-@main.route("/orders/<int:id>",methods=["POST"])
+@main.route("/orders",methods=["POST"])
 @jwt_required()
-def orders(id):
+def orders():
     db=get_db()
     cursor=db.cursor()
     
@@ -274,7 +274,7 @@ def orders(id):
     sql="SELECT * FROM addcart WHERE id=%s"
     cursor.execute(sql,(current_user,))
     
-    products=cursor.fetchone()
+    products=cursor.fetchall()
     
     sql="SELECT SUM(c.quantity * p.Price) AS amount FROM addcart c JOIN Products p ON c.Product_id = p.Product_id WHERE c.id=%s   "
     cursor.execute(sql,(current_user,))
@@ -293,10 +293,45 @@ def orders(id):
     cursor.execute(sql,values)
     db.commit()
     
+    order_id=cursor.lastrowid
+    
+    sql="SELECT Product_id,quantity FROM addcart WHERE id=%s"
+    cursor.execute(sql,(current_user,))
+    
+    Products=cursor.fetchall()
+    
+    for product in products:
+        sql="INSERT INTO Order_Items(order_id,Product_id,quantity) VALUES(%s,%s,%s)"
+        values=(order_id,product[2],product[3])
+    
+        cursor.execute(sql,values)
+        db.commit()
+        
+    sql="SELECT Product_id,quantity FROM Order_Items Where order_id=%s"
+    cursor.execute(sql,(order_id,))
+    
+    product=cursor.fetchall()
+    print(product)
+    
+    for products in product:
+        sql="UPDATE Products SET quantity=quantity-quantity WHERE Product_id=%s"
+        values=(products[1],products[0])
+        
+        cursor.execute(sql,values)
+        db.commit()
+    
+    sql="DELETE FROM addcart WHERE id=%s"
+    cursor.execute(sql,(current_user,))
+    
+    db.commit()
+    
+    
     return{
         "message":"order is added successfully"
     }
     
+ 
+
 
     
     
