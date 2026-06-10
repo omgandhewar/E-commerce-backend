@@ -314,7 +314,7 @@ def orders():
     print(product)
     
     for products in product:
-        sql="UPDATE Products SET quantity=quantity-quantity WHERE Product_id=%s"
+        sql="UPDATE Products SET quantity=quantity-%s WHERE Product_id=%s"
         values=(products[1],products[0])
         
         cursor.execute(sql,values)
@@ -331,7 +331,38 @@ def orders():
     }
     
  
-
-
+@main.route("/viewcart",methods=["GET"])
+@jwt_required()
+def view_cart():
+    db=get_db()
+    cursor=db.cursor()
     
+    current_user=get_jwt_identity()
     
+    sql="SELECT c.Cartproduct_id,p.Product_name,p.Price,c.quantity,(p.Price*c.quantity) as amount FROM addcart c JOIN products p ON c.Product_id=p.Product_id WHERE id=%s"
+    cursor.execute(sql,(current_user,))
+    
+    products=cursor.fetchall()
+    
+    return{
+        "products":products
+    }
+    
+@main.route("/vieworder",methods=["GET"])
+@jwt_required()
+def view_order():
+    db=get_db()
+    cursor=db.cursor()
+    
+    current_user=get_jwt_identity()
+    
+    sql="SELECT o.order_id,p.product_name,p.Price,Oi.quantity,o.amount FROM order1 o JOIN Order_Items Oi ON o.order_id=Oi.order_id JOIN products p ON Oi.Product_id=p.Product_id WHERE o.id=%s "
+    cursor.execute(sql,(current_user,))
+    
+    products=cursor.fetchall()
+    
+    return{
+        "products":products
+    }
+    
+   
