@@ -348,6 +348,7 @@ def view_cart():
         "products":products
     }
     
+    
 @main.route("/vieworder",methods=["GET"])
 @jwt_required()
 def view_order():
@@ -356,7 +357,7 @@ def view_order():
     
     current_user=get_jwt_identity()
     
-    sql="SELECT o.order_id,p.product_name,p.Price,Oi.quantity,o.amount FROM order1 o JOIN Order_Items Oi ON o.order_id=Oi.order_id JOIN products p ON Oi.Product_id=p.Product_id WHERE o.id=%s "
+    sql="SELECT o.order_id,o.status,p.product_name,p.Price,Oi.quantity,o.amount FROM order1 o JOIN Order_Items Oi ON o.order_id=Oi.order_id JOIN products p ON Oi.Product_id=p.Product_id WHERE o.id=%s "
     cursor.execute(sql,(current_user,))
     
     products=cursor.fetchall()
@@ -364,5 +365,65 @@ def view_order():
     return{
         "products":products
     }
+  
     
-   
+@main.route("/updatecart/<int:id>",methods=["PUT"])
+@jwt_required()
+def update_cart(id):
+        db=get_db()
+        cursor=db.cursor()
+        
+        current_user=get_jwt_identity()
+        
+        data=request.get_json()
+        
+        quantity=data.get("quantity")
+        
+        sql="SELECT * FROM addcart WHERE Cartproduct_id=%s AND id=%s"
+        cursor.execute(sql,(id,current_user))
+        
+        products=cursor.fetchall()
+        
+        if not products:
+            return{
+                "message":"product not in cart"
+            }
+            
+        sql="UPDATE addcart SET quantity=%s WHERE Cartproduct_id=%s AND id=%s"
+        cursor.execute(sql,(quantity,id,current_user))
+        
+        db.commit()
+        
+        return{
+            "message":"Cart updated succesfully"
+        }
+        
+@main.route("/updatestatus/<int:id>",methods=["PUT"])
+@jwt_required()
+def update_status(id):
+    db=get_db()
+    cursor=db.cursor()
+    
+    current_user=get_jwt()
+    
+    data=request.get_json()
+    
+    status=data.get("status")
+    
+    if current_user["role"]!="admin":
+        return{
+            "mesasge":"Invalid user"
+        }
+            
+    sql="UPDATE order1 SET status=%s WHERE order_id=%s"
+    cursor.execute(sql,(status,id))
+    
+    db.commit()
+    
+    return{
+        "message":"status update successfully"
+    }
+    
+
+    
+            
