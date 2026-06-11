@@ -445,6 +445,9 @@ def view_product():
         "message":products
     }
     
+
+
+    
     
     
     
