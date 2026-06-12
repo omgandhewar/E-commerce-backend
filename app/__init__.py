@@ -1,11 +1,12 @@
 from flask import Flask
-from flask_jwt_extended import JWTManager
-from flask_bcrypt import Bcrypt
+from app.flaskextension import bcrypt, jwt
 from datetime import timedelta
+from app.routes.auth_routes import auth_bp
+from app.routes.order_routes import order_bp
+from app.routes.cart_routes import cart_bp
+from app.routes.product_routes import product_bp
 
 
-jwt=JWTManager()
-bcrypt=Bcrypt()
 def create_app():
     app=Flask(__name__)
     
@@ -17,8 +18,11 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     
-    from app.routes import main
-    app.register_blueprint(main)
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(cart_bp)
+    app.register_blueprint(product_bp)
     
     print(app.url_map)
     
