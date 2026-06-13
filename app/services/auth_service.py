@@ -69,7 +69,7 @@ def login_user(data):
             "message":"Invalid password"
         }
         
-    token=token = create_access_token(
+    token = create_access_token(
     identity=str(user_obj[0]),
     additional_claims={
         "role": user_obj[3]

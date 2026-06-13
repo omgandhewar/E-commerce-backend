@@ -1,6 +1,7 @@
 from flask import Flask
 from app.flaskextension import bcrypt, jwt
 from datetime import timedelta
+from flask_cors import CORS
 from app.routes.auth_routes import auth_bp
 from app.routes.order_routes import order_bp
 from app.routes.cart_routes import cart_bp
@@ -17,6 +18,7 @@ def create_app():
     
     jwt.init_app(app)
     bcrypt.init_app(app)
+    CORS(app)
     
 
     app.register_blueprint(auth_bp)
